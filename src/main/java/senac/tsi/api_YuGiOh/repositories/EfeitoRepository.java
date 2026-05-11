@@ -9,5 +9,7 @@ import senac.tsi.api_YuGiOh.entities.Efeito;
 
 @Repository
 public interface EfeitoRepository extends JpaRepository<Efeito, Long> {
-    Page<Efeito> findByDescricaoContaining(String descricao, Pageable pageable);
+
+    Page<Efeito> findByDescricaoContainingIgnoreCase(String descricao, Pageable pageable);
+
 }

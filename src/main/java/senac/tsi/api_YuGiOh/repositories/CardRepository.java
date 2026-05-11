@@ -8,5 +8,6 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface CardRepository extends JpaRepository<CardEntity, Long> {
 
-    Page<CardEntity> findByNomeContaining(String nome, Pageable pageable);
+    Page<CardEntity> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+
 }

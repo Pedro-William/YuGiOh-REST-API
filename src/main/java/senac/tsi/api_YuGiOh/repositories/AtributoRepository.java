@@ -7,5 +7,7 @@ import org.springframework.stereotype.Repository;
 import senac.tsi.api_YuGiOh.entities.Atributo;
 @Repository
 public interface AtributoRepository extends JpaRepository<Atributo, Long> {
-    Page<Atributo> findByNomeContaining(String nome, Pageable pageable);
+
+    Page<Atributo> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+
 }

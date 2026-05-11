@@ -9,5 +9,7 @@ import senac.tsi.api_YuGiOh.entities.Colecao;
 
 @Repository
 public interface ColecaoRepository extends JpaRepository<Colecao, Long> {
-    Page<Colecao> findByNomeContaining(String nome, Pageable pageable);
+
+    Page<Colecao> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+
 }

@@ -8,5 +8,7 @@ import senac.tsi.api_YuGiOh.entities.Deck;
 
 @Repository
 public interface DeckRepository extends JpaRepository<Deck, Long> {
-    Page<Deck> findByNomeContaining(String nome, Pageable pageable);
+
+    Page<Deck> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+
 }

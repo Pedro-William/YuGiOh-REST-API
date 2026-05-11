@@ -1,126 +1,133 @@
 package senac.tsi.api_YuGiOh.controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import senac.tsi.api_YuGiOh.entities.Colecao;
-import senac.tsi.api_YuGiOh.repositories.ColecaoRepository;
+import senac.tsi.api_YuGiOh.services.ColecaoService;
 
 import java.util.List;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Coleções", description = "Gerenciamento de coleções de cartas")
+@Tag(name = "Coleções", description = "Gerenciamento de coleções")
 @RestController
 @RequestMapping("/colecoes")
 @RequiredArgsConstructor
 public class ColecaoController {
 
-    private final ColecaoRepository repo;
+    private final ColecaoService service;
 
-    @Operation(summary = "Listar coleções", description = "Retorna lista paginada de coleções")
-    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    @Operation(summary = "Listar coleções")
     @GetMapping
     public ResponseEntity<CollectionModel<EntityModel<Colecao>>> listar(Pageable pageable) {
 
-        Page<Colecao> page = repo.findAll(pageable);
+        Page<Colecao> page = service.listar(pageable);
 
-        List<EntityModel<Colecao>> colecoes = page.getContent().stream()
-                .map(c -> EntityModel.of(c))
+        List<EntityModel<Colecao>> lista = page.getContent().stream()
+                .map(c -> EntityModel.of(c,
+                        linkTo(methodOn(ColecaoController.class)
+                                .buscar(c.getId())).withSelfRel()
+                ))
                 .toList();
 
-        return ResponseEntity.ok(CollectionModel.of(colecoes));
+        return ResponseEntity.ok(CollectionModel.of(lista));
     }
 
-    @Operation(
-            summary = "Buscar coleção por ID",
-            description = "Retorna uma coleção específica pelo ID"
-    )
-    @ApiResponse(responseCode = "200", description = "Coleção encontrada")
-    @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
+    @Operation(summary = "Buscar coleção por ID")
     @GetMapping("/{id}")
     public ResponseEntity<EntityModel<Colecao>> buscar(@PathVariable Long id) {
 
-        Colecao colecao = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Coleção não encontrada"));
+        Colecao colecao = service.buscarPorId(id);
 
         return ResponseEntity.ok(EntityModel.of(colecao,
-                linkTo(methodOn(ColecaoController.class).listar(Pageable.unpaged())).withRel("colecoes"),
-                linkTo(methodOn(ColecaoController.class).atualizar(id, colecao)).withRel("update"),
-                linkTo(methodOn(ColecaoController.class).deletar(id)).withRel("delete")
+
+                linkTo(methodOn(ColecaoController.class)
+                        .buscar(id)).withSelfRel(),
+
+                linkTo(methodOn(ColecaoController.class)
+                        .listar(Pageable.unpaged())).withRel("colecoes"),
+
+                linkTo(methodOn(ColecaoController.class)
+                        .atualizar(id, colecao)).withRel("update"),
+
+                linkTo(methodOn(ColecaoController.class)
+                        .deletar(id)).withRel("delete")
         ));
     }
 
-    @Operation(summary = "Criar coleção", description = "Cria uma nova coleção")
-    @ApiResponse(responseCode = "201", description = "Coleção criada")
     @PostMapping
-    public ResponseEntity<EntityModel<Colecao>> criar(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Objeto coleção a ser criado",
-                    required = true,
-                    content = @Content(
-                            schema = @Schema(implementation = Colecao.class),
-                            examples = @ExampleObject(
-                                    value = "{\"nome\": \"Starter Deck\"}"
-                            )
-                    )
-            )
-            @RequestBody Colecao colecao) {
+    public ResponseEntity<EntityModel<Colecao>> criar(@RequestBody Colecao colecao) {
 
-        Colecao salvo = repo.save(colecao);
+        Colecao salvo = service.criar(colecao);
 
         return ResponseEntity
-                .created(linkTo(methodOn(ColecaoController.class).listar(Pageable.unpaged())).toUri())
-                .body(EntityModel.of(salvo));
+                .created(linkTo(methodOn(ColecaoController.class)
+                        .buscar(salvo.getId())).toUri())
+                .body(EntityModel.of(salvo,
+
+                        linkTo(methodOn(ColecaoController.class)
+                                .buscar(salvo.getId())).withSelfRel()
+                ));
     }
 
-    @Operation(
-            summary = "Atualizar coleção",
-            description = "Atualiza os dados de uma coleção existente"
-    )
-    @ApiResponse(responseCode = "200", description = "Coleção atualizada")
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<Colecao>> atualizar(@PathVariable Long id,
-                                                          @RequestBody Colecao colecao) {
+    public ResponseEntity<EntityModel<Colecao>> atualizar(
+            @PathVariable Long id,
+            @RequestBody Colecao colecao) {
 
-        colecao.setId(id);
-        Colecao atualizado = repo.save(colecao);
+        Colecao atualizado = service.atualizar(id, colecao);
 
         return ResponseEntity.ok(EntityModel.of(atualizado,
-                linkTo(methodOn(ColecaoController.class).buscar(id)).withSelfRel()
+
+                linkTo(methodOn(ColecaoController.class)
+                        .buscar(id)).withSelfRel()
         ));
     }
 
-    @Operation(
-            summary = "Deletar coleção",
-            description = "Remove uma coleção pelo ID"
-    )
-    @ApiResponse(responseCode = "204", description = "Coleção removida")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
 
-        repo.deleteById(id);
+        service.deletar(id);
+
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(
-            summary = "Buscar coleções por nome",
-            description = "Retorna coleções filtradas pelo nome com paginação"
-    )
-    @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso")
     @GetMapping("/buscar")
-    public ResponseEntity<Page<Colecao>> buscarPorNome(@RequestParam String nome, Pageable pageable) {
+    public ResponseEntity<PagedModel<EntityModel<Colecao>>> buscarPorNome(
+            @RequestParam String nome,
+            @ParameterObject Pageable pageable) {
 
-        return ResponseEntity.ok(repo.findByNomeContaining(nome, pageable));
+        Page<Colecao> pagina = service.buscarPorNome(nome, pageable);
+
+        List<EntityModel<Colecao>> lista = pagina.getContent().stream()
+                .map(c -> EntityModel.of(c,
+
+                        linkTo(methodOn(ColecaoController.class)
+                                .buscar(c.getId())).withSelfRel()
+                ))
+                .toList();
+
+        PagedModel<EntityModel<Colecao>> pagedModel =
+                PagedModel.of(lista,
+                        new PagedModel.PageMetadata(
+                                pagina.getSize(),
+                                pagina.getNumber(),
+                                pagina.getTotalElements()
+                        ));
+
+        return ResponseEntity.ok(pagedModel);
     }
 }
