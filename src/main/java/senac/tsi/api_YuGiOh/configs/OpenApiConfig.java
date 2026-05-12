@@ -50,7 +50,7 @@ public class OpenApiConfig {
                                         "- 400 Bad Request: dados inválidos ou requisição mal formatada\n" +
                                         "- 404 Not Found: recurso não encontrado\n\n" +
 
-                                        "A API também implementa HATEOAS para navegação entre recursos e possui documentação interativa com Swagger (OpenAPI), facilitando o uso e testes dos endpoints.\n\n" +
+                                        "A API também implementa HATEOAS para navegação entre recursos , facilitando o uso e testes dos endpoints.\n\n" +
 
                                         "© 2026 Pedro Almeida. Todos os direitos reservados."
                         )

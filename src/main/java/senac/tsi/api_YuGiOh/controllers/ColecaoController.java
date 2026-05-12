@@ -47,6 +47,8 @@ public class ColecaoController {
     }
 
     @Operation(summary = "Buscar coleção por ID")
+    @ApiResponse(responseCode = "200", description = "Coleção encontrada com sucesso")
+    @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
     @GetMapping("/{id}")
     public ResponseEntity<EntityModel<Colecao>> buscar(@PathVariable Long id) {
 
@@ -68,6 +70,9 @@ public class ColecaoController {
         ));
     }
 
+    @Operation(summary = "Criar coleção")
+    @ApiResponse(responseCode = "201", description = "Coleção criada com sucesso")
+    @ApiResponse(responseCode = "400", description = "Dados invalidos")
     @PostMapping
     public ResponseEntity<EntityModel<Colecao>> criar(@RequestBody Colecao colecao) {
 
@@ -83,6 +88,9 @@ public class ColecaoController {
                 ));
     }
 
+    @Operation(summary = "Atualizar coleção")
+    @ApiResponse(responseCode = "200", description = "Coleção atualizada com sucesso")
+    @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
     @PutMapping("/{id}")
     public ResponseEntity<EntityModel<Colecao>> atualizar(
             @PathVariable Long id,
@@ -97,6 +105,9 @@ public class ColecaoController {
         ));
     }
 
+    @Operation(summary = "Deletar coleção")
+    @ApiResponse(responseCode = "200", description = "Coleção deletada com sucesso")
+    @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
 
@@ -105,6 +116,9 @@ public class ColecaoController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Buscar coleção por nome")
+    @ApiResponse(responseCode = "200", description = "Coleção encontrada com sucesso")
+    @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
     @GetMapping("/buscar")
     public ResponseEntity<PagedModel<EntityModel<Colecao>>> buscarPorNome(
             @RequestParam String nome,

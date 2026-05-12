@@ -26,7 +26,6 @@ public class Colecao {
     private String nome;
 
     @OneToMany(mappedBy = "colecao")
-    @JsonIgnore
     @Schema(description = "Lista de cartas pertencentes à coleção (não exibido no JSON)")
     private List<CardEntity> cartas;
 }

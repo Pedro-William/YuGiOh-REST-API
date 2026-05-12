@@ -39,6 +39,7 @@ public class CardEntity {
     private Atributo atributo;
 
     @ManyToOne
+    @JsonIgnore
     @Schema(description = "Coleção à qual a carta pertence")
     private Colecao colecao;
 
@@ -48,6 +49,6 @@ public class CardEntity {
 
     @ManyToMany(mappedBy = "cartas")
     @JsonIgnore
-    @Schema(description = "Lista de decks que contêm esta carta (não exibido no JSON)")
+    @Schema(description = "Lista de decks que contêm esta carta")
     private List<Deck> decks;
 }
