@@ -34,7 +34,7 @@ public class DeckController {
     @Operation(summary = "Listar decks")
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     @GetMapping
-    public ResponseEntity<CollectionModel<EntityModel<Deck>>> listar(Pageable pageable) {
+    public ResponseEntity<CollectionModel<EntityModel<Deck>>> listar(@ParameterObject Pageable pageable) {
 
         Page<Deck> page = service.listar(pageable);
 

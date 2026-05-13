@@ -48,7 +48,8 @@ public class OpenApiConfig {
                                         "- 201 Created: recurso criado com sucesso\n" +
                                         "- 204 No Content: remoção realizada com sucesso\n" +
                                         "- 400 Bad Request: dados inválidos ou requisição mal formatada\n" +
-                                        "- 404 Not Found: recurso não encontrado\n\n" +
+                                        "- 404 Not Found: recurso não encontrado\n" +
+                                        "- 429 To Many Requests: Limite de requisicoes excedido\n\n" +
 
                                         "A API também implementa HATEOAS para navegação entre recursos , facilitando o uso e testes dos endpoints.\n\n" +
 

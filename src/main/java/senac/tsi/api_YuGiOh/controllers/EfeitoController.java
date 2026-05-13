@@ -31,7 +31,7 @@ public class EfeitoController {
 
     @Operation(summary = "Listar efeitos")
     @GetMapping
-    public ResponseEntity<CollectionModel<EntityModel<Efeito>>> listar(Pageable pageable) {
+    public ResponseEntity<CollectionModel<EntityModel<Efeito>>> listar(@ParameterObject Pageable pageable) {
 
         Page<Efeito> page = service.listar(pageable);
 

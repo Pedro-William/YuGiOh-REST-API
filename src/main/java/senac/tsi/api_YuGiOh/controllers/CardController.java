@@ -34,7 +34,7 @@ public class CardController {
     @Operation(summary = "Listar cartas")
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     @GetMapping
-    public ResponseEntity<CollectionModel<EntityModel<CardEntity>>> listar(Pageable pageable) {
+    public ResponseEntity<CollectionModel<EntityModel<CardEntity>>> listar(@ParameterObject Pageable pageable) {
 
         Page<CardEntity> page = service.listar(pageable);
 

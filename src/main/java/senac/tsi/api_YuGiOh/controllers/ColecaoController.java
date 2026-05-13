@@ -32,7 +32,7 @@ public class ColecaoController {
 
     @Operation(summary = "Listar coleções")
     @GetMapping
-    public ResponseEntity<CollectionModel<EntityModel<Colecao>>> listar(Pageable pageable) {
+    public ResponseEntity<CollectionModel<EntityModel<Colecao>>> listar(@ParameterObject Pageable pageable) {
 
         Page<Colecao> page = service.listar(pageable);
 

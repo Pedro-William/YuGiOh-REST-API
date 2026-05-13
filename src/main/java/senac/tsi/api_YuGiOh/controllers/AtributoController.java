@@ -37,7 +37,7 @@ public class AtributoController {
     )
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     @GetMapping
-    public ResponseEntity<CollectionModel<EntityModel<Atributo>>> listar(Pageable pageable) {
+    public ResponseEntity<CollectionModel<EntityModel<Atributo>>> listar(@ParameterObject Pageable pageable) {
 
         Page<Atributo> page = service.listar(pageable);
 
