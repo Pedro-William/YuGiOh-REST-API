@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import senac.tsi.api_YuGiOh.configs.IdempotencyStorage;
 import senac.tsi.api_YuGiOh.entities.Atributo;
 import senac.tsi.api_YuGiOh.services.AtributoService;
 
@@ -30,12 +31,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class AtributoController {
 
     private final AtributoService service;
+    private final IdempotencyStorage storage;
 
     @Operation(
             summary = "Listar atributos",
             description = "Retorna uma lista paginada de atributos com links HATEOAS"
     )
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping
     public ResponseEntity<CollectionModel<EntityModel<Atributo>>> listar(@ParameterObject Pageable pageable) {
 
@@ -60,6 +63,7 @@ public class AtributoController {
     )
     @ApiResponse(responseCode = "200", description = "Atributo encontrado")
     @ApiResponse(responseCode = "404", description = "Atributo não encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/{id}")
     public ResponseEntity<EntityModel<Atributo>> buscar(@PathVariable Long id) {
 
@@ -81,25 +85,46 @@ public class AtributoController {
     )
     @ApiResponse(responseCode = "201", description = "Atributo criado com sucesso")
     @ApiResponse(responseCode = "400", description = "Dados inválidos")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PostMapping
     public ResponseEntity<EntityModel<Atributo>> criar(
+
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Objeto atributo a ser criado",
                     required = true,
                     content = @Content(
                             schema = @Schema(implementation = Atributo.class),
-                            examples = @ExampleObject(value = "{\"nome\": \"LUZ\"}")
+                            examples = @ExampleObject(
+                                    value = """
+                                        {
+                                          "nome": "LUZ"
+                                        }
+                                        """
+                            )
                     )
             )
-            @RequestBody Atributo atributo) {
+
+            @RequestBody Atributo atributo,
+            @RequestHeader("X-Idempotency-Key") String key) {
+
+        if (storage.existe(key)) {
+            return ResponseEntity.ok(storage.buscar(key));
+        }
 
         Atributo salvo = service.criar(atributo);
 
+        EntityModel<Atributo> response = EntityModel.of(salvo,
+
+                linkTo(methodOn(AtributoController.class)
+                        .buscar(salvo.getId())).withSelfRel()
+        );
+
+        storage.salvar(key, response);
+
         return ResponseEntity
-                .created(linkTo(methodOn(AtributoController.class).buscar(salvo.getId())).toUri())
-                .body(EntityModel.of(salvo,
-                        linkTo(methodOn(AtributoController.class).buscar(salvo.getId())).withSelfRel()
-                ));
+                .created(linkTo(methodOn(AtributoController.class)
+                        .buscar(salvo.getId())).toUri())
+                .body(response);
     }
 
     @Operation(
@@ -108,6 +133,7 @@ public class AtributoController {
     )
     @ApiResponse(responseCode = "200", description = "Atributo atualizado com sucesso")
     @ApiResponse(responseCode = "404", description = "Atributo não encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PutMapping("/{id}")
     public ResponseEntity<EntityModel<Atributo>> atualizar(@PathVariable Long id,
                                                            @RequestBody Atributo atributo) {
@@ -127,6 +153,7 @@ public class AtributoController {
     )
     @ApiResponse(responseCode = "204", description = "Atributo removido com sucesso")
     @ApiResponse(responseCode = "404", description = "Atributo não encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
 
@@ -141,6 +168,7 @@ public class AtributoController {
     )
     @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso")
     @ApiResponse(responseCode = "404", description = "Atributo não encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/buscar")
     public ResponseEntity<PagedModel<EntityModel<Atributo>>> buscarPorNome(
             @RequestParam String nome,

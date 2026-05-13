@@ -8,6 +8,7 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import senac.tsi.api_YuGiOh.configs.IdempotencyStorage;
 import senac.tsi.api_YuGiOh.entities.CardEntity;
 import org.springframework.data.domain.Pageable;
 
@@ -30,9 +31,11 @@ import senac.tsi.api_YuGiOh.services.CardService;
 public class CardController {
 
     private final CardService service;
+    private final IdempotencyStorage storage;
 
     @Operation(summary = "Listar cartas")
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping
     public ResponseEntity<CollectionModel<EntityModel<CardEntity>>> listar(@ParameterObject Pageable pageable) {
 
@@ -50,6 +53,7 @@ public class CardController {
     @Operation(summary = "Buscar carta por ID")
     @ApiResponse(responseCode = "200", description = "Carta encontrada com sucesso")
     @ApiResponse(responseCode = "404", description = "Carta não encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/{id}")
     public ResponseEntity<EntityModel<CardEntity>> buscar(@PathVariable Long id) {
 
@@ -61,19 +65,62 @@ public class CardController {
     @Operation(summary = "Criar carta")
     @ApiResponse(responseCode = "201", description = "Carta criada com sucesso")
     @ApiResponse(responseCode = "400", description = "Dados inválidos")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PostMapping
-    public ResponseEntity<EntityModel<CardEntity>> criar(@RequestBody CardEntity card) {
+    public ResponseEntity<EntityModel<CardEntity>> criar(
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Objeto carta a ser criado",
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = CardEntity.class),
+                            examples = @ExampleObject(
+                                    value = """
+                                        {
+                                          "nome": "Dragão Branco",
+                                          "tipo": "MONSTRO",
+                                          "atributo": {
+                                            "id": 1
+                                          },
+                                          "colecao": {
+                                            "id": 1
+                                          },
+                                          "efeitos": [
+                                            { "id": 1 }
+                                          ]
+                                        }
+                                        """
+                            )
+                    )
+            )
+
+            @RequestBody CardEntity card,
+            @RequestHeader("X-Idempotency-Key") String key) {
+
+        if (storage.existe(key)) {
+            return ResponseEntity.ok(storage.buscar(key));
+        }
 
         CardEntity salvo = service.criar(card);
 
+        EntityModel<CardEntity> response = EntityModel.of(salvo,
+
+                linkTo(methodOn(CardController.class)
+                        .buscar(salvo.getId())).withSelfRel()
+        );
+
+        storage.salvar(key, response);
+
         return ResponseEntity
-                .created(linkTo(methodOn(CardController.class).buscar(salvo.getId())).toUri())
-                .body(EntityModel.of(salvo));
+                .created(linkTo(methodOn(CardController.class)
+                        .buscar(salvo.getId())).toUri())
+                .body(response);
     }
 
     @Operation(summary = "Atualizar carta")
     @ApiResponse(responseCode = "200", description = "carta atualizada com sucesso")
     @ApiResponse(responseCode = "404", description = "carta nao encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PutMapping("/{id}")
     public ResponseEntity<EntityModel<CardEntity>> atualizar(@PathVariable Long id,
                                                              @RequestBody CardEntity card) {
@@ -82,8 +129,9 @@ public class CardController {
     }
 
     @Operation(summary = "Deletar carta")
-    @ApiResponse(responseCode = "200", description = "Carta deletada com sucesso")
+    @ApiResponse(responseCode = "204", description = "Carta deletada com sucesso")
     @ApiResponse(responseCode = "404", description = "Carta não encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         service.deletar(id);
@@ -93,6 +141,7 @@ public class CardController {
     @Operation(summary = "Buscar carta por nome")
     @ApiResponse(responseCode = "200", description = "Carta encontrada com sucesso")
     @ApiResponse(responseCode = "404", description = "Carta não encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/buscar")
     public ResponseEntity<PagedModel<EntityModel<CardEntity>>> buscarPorNome(
             @RequestParam String nome,

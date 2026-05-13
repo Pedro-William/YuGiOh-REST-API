@@ -10,6 +10,7 @@ import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import senac.tsi.api_YuGiOh.configs.IdempotencyStorage;
 import senac.tsi.api_YuGiOh.entities.Colecao;
 import senac.tsi.api_YuGiOh.services.ColecaoService;
 
@@ -29,8 +30,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ColecaoController {
 
     private final ColecaoService service;
+    private final IdempotencyStorage storage;
 
     @Operation(summary = "Listar coleções")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping
     public ResponseEntity<CollectionModel<EntityModel<Colecao>>> listar(@ParameterObject Pageable pageable) {
 
@@ -49,6 +52,7 @@ public class ColecaoController {
     @Operation(summary = "Buscar coleção por ID")
     @ApiResponse(responseCode = "200", description = "Coleção encontrada com sucesso")
     @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/{id}")
     public ResponseEntity<EntityModel<Colecao>> buscar(@PathVariable Long id) {
 
@@ -73,24 +77,52 @@ public class ColecaoController {
     @Operation(summary = "Criar coleção")
     @ApiResponse(responseCode = "201", description = "Coleção criada com sucesso")
     @ApiResponse(responseCode = "400", description = "Dados invalidos")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PostMapping
-    public ResponseEntity<EntityModel<Colecao>> criar(@RequestBody Colecao colecao) {
+    public ResponseEntity<EntityModel<Colecao>> criar(
+
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Objeto coleção a ser criada",
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = Colecao.class),
+                            examples = @ExampleObject(
+                                    value = """
+                                        {
+                                          "nome": "Starter Deck"
+                                        }
+                                        """
+                            )
+                    )
+            )
+
+            @RequestBody Colecao colecao,
+            @RequestHeader("X-Idempotency-Key") String key) {
+
+        if (storage.existe(key)) {
+            return ResponseEntity.ok(storage.buscar(key));
+        }
 
         Colecao salvo = service.criar(colecao);
+
+        EntityModel<Colecao> response = EntityModel.of(salvo,
+
+                linkTo(methodOn(ColecaoController.class)
+                        .buscar(salvo.getId())).withSelfRel()
+        );
+
+        storage.salvar(key, response);
 
         return ResponseEntity
                 .created(linkTo(methodOn(ColecaoController.class)
                         .buscar(salvo.getId())).toUri())
-                .body(EntityModel.of(salvo,
-
-                        linkTo(methodOn(ColecaoController.class)
-                                .buscar(salvo.getId())).withSelfRel()
-                ));
+                .body(response);
     }
 
     @Operation(summary = "Atualizar coleção")
     @ApiResponse(responseCode = "200", description = "Coleção atualizada com sucesso")
     @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PutMapping("/{id}")
     public ResponseEntity<EntityModel<Colecao>> atualizar(
             @PathVariable Long id,
@@ -106,8 +138,9 @@ public class ColecaoController {
     }
 
     @Operation(summary = "Deletar coleção")
-    @ApiResponse(responseCode = "200", description = "Coleção deletada com sucesso")
+    @ApiResponse(responseCode = "204", description = "Coleção deletada com sucesso")
     @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
 
@@ -119,6 +152,7 @@ public class ColecaoController {
     @Operation(summary = "Buscar coleção por nome")
     @ApiResponse(responseCode = "200", description = "Coleção encontrada com sucesso")
     @ApiResponse(responseCode = "404", description = "Coleção não encontrada")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/buscar")
     public ResponseEntity<PagedModel<EntityModel<Colecao>>> buscarPorNome(
             @RequestParam String nome,

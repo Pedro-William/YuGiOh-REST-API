@@ -10,6 +10,7 @@ import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import senac.tsi.api_YuGiOh.configs.IdempotencyStorage;
 import senac.tsi.api_YuGiOh.entities.Deck;
 import senac.tsi.api_YuGiOh.services.DeckService;
 
@@ -30,9 +31,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class DeckController {
 
     private final DeckService service;
+    private final IdempotencyStorage storage;
 
     @Operation(summary = "Listar decks")
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping
     public ResponseEntity<CollectionModel<EntityModel<Deck>>> listar(@ParameterObject Pageable pageable) {
 
@@ -51,6 +54,7 @@ public class DeckController {
     @Operation(summary = "Buscar deck por ID")
     @ApiResponse(responseCode = "200", description = "Deck encontrado")
     @ApiResponse(responseCode = "404", description = "Deck não encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/{id}")
     public ResponseEntity<EntityModel<Deck>> buscar(@PathVariable Long id) {
 
@@ -74,6 +78,7 @@ public class DeckController {
     @Operation(summary = "Criar deck")
     @ApiResponse(responseCode = "201", description = "Deck criado com sucesso")
     @ApiResponse(responseCode = "400", description = "Dados inválidos")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PostMapping
     public ResponseEntity<EntityModel<Deck>> criar(
 
@@ -96,22 +101,39 @@ public class DeckController {
                     )
             )
 
-            @RequestBody Deck deck) {
+            @RequestBody Deck deck,
+            @RequestHeader("X-Idempotency-Key") String key ) {
+
+        if (storage.existe(key)) {
+
+            return ResponseEntity.ok(storage.buscar(key));
+        }
 
         Deck salvo = service.criar(deck);
+        EntityModel<Deck> response = EntityModel.of(salvo,
+
+                linkTo(methodOn(DeckController.class)
+                        .buscar(salvo.getId())).withSelfRel(),
+
+                linkTo(methodOn(DeckController.class)
+                        .atualizar(salvo.getId(), salvo)).withRel("update"),
+
+                linkTo(methodOn(DeckController.class)
+                        .deletar(salvo.getId())).withRel("delete")
+        );
+
+        storage.salvar(key, response);
 
         return ResponseEntity
                 .created(linkTo(methodOn(DeckController.class)
                         .buscar(salvo.getId())).toUri())
-                .body(EntityModel.of(salvo,
-                        linkTo(methodOn(DeckController.class)
-                                .buscar(salvo.getId())).withSelfRel()
-                ));
+                .body(response);
     }
 
     @Operation(summary = "Atualizar deck")
     @ApiResponse(responseCode = "200", description = "Deck atualizado com sucesso")
     @ApiResponse(responseCode = "404", description = "Deck não encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @PutMapping("/{id}")
     public ResponseEntity<EntityModel<Deck>> atualizar(
             @PathVariable Long id,
@@ -130,6 +152,7 @@ public class DeckController {
     @Operation(summary = "Deletar deck")
     @ApiResponse(responseCode = "204", description = "Deck removido com sucesso")
     @ApiResponse(responseCode = "404", description = "Deck não encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
 
@@ -141,6 +164,7 @@ public class DeckController {
     @Operation(summary = "Buscar decks por nome")
     @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso")
     @ApiResponse(responseCode = "404", description = "Nenhum deck encontrado")
+    @ApiResponse(responseCode = "429", description = "To Many requests")
     @GetMapping("/buscar")
     public ResponseEntity<PagedModel<EntityModel<Deck>>> buscarPorNome(
             @RequestParam String nome,
